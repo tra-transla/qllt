@@ -94,9 +94,9 @@ class DatabaseEngine {
         console.log('Successfully connected to MySQL database!');
         await this.setupMySQLSchema();
         return;
-      } catch (err) {
-        console.error('Failed to connect to MySQL database:', err);
-        console.log('Falling back to file-based JSON storage...');
+      } catch (err: any) {
+        console.log(`Note: MySQL connection failed (${err.message || err}).`);
+        console.log('Falling back to high-performance local JSON database (db.json)...');
       }
     } else {
       console.log('MySQL credentials not fully provided. Using file-based JSON storage...');
