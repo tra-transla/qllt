@@ -5,7 +5,20 @@ import { db, hashPassword, verifyPassword, createSessionToken, verifySessionToke
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  
+  // Detect if we are running in AI Studio sandbox.
+  // AI Studio sandboxes use container environments where the external proxy expects port 3000.
+  const isAIStudio = process.env.APP_URL && (
+    process.env.APP_URL.includes('asia-southeast1.run.app') || 
+    process.env.APP_URL.includes('aistudio') ||
+    process.env.APP_URL.includes('ais-dev') ||
+    process.env.APP_URL.includes('ais-pre')
+  );
+
+  // On standard production hosting like Hostinger (using Phusion Passenger or similar),
+  // the server MUST listen on process.env.PORT (which can be a port number or a named pipe path).
+  // In AI Studio, we force port 3000 to satisfy the container port forwarder.
+  const PORT = isAIStudio ? 3000 : (process.env.PORT || 3000);
 
   // Initialize Database (MySQL or fallback JSON)
   await db.init();
@@ -344,9 +357,16 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
+  // Start listening
+  if (typeof PORT === 'string') {
+    app.listen(PORT, () => {
+      console.log(`Server running on Passenger pipe/socket: ${PORT}`);
+    });
+  } else {
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Server running on port ${Number(PORT)}`);
+    });
+  }
 }
 
 startServer();
