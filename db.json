@@ -1,0 +1,70 @@
+{
+  "leaders": [
+    {
+      "id": 1,
+      "name": "Đ/c Nguyễn Hữu Đông",
+      "position": "Bí thư Tỉnh ủy",
+      "department": "Tỉnh ủy",
+      "phone": "0912.345.678"
+    },
+    {
+      "id": 2,
+      "name": "Đ/c Lò Minh Hùng",
+      "position": "Phó Bí thư Thường trực",
+      "department": "Tỉnh ủy",
+      "phone": "0983.456.789"
+    },
+    {
+      "id": 3,
+      "name": "Đ/c Nguyễn Thái Hưng",
+      "position": "Chủ tịch HĐND Tỉnh",
+      "department": "HĐND Tỉnh",
+      "phone": "0945.123.456"
+    },
+    {
+      "id": 4,
+      "name": "Đ/c Hoàng Quốc Khánh",
+      "position": "Chủ tịch UBND Tỉnh",
+      "department": "UBND Tỉnh",
+      "phone": "0903.987.654"
+    }
+  ],
+  "schedules": [
+    {
+      "id": 2,
+      "date": "2026-07-17",
+      "time": "14:00:00",
+      "content": "Hội nghị Ban Thường vụ Tỉnh uỷ kỳ thứ 45",
+      "program_document": "Giấy mời số 148-GM/TU",
+      "preparation": "Ban Tổ chức Tỉnh ủy chuẩn bị nội dung công tác cán bộ",
+      "location": "Phòng họp BCH Đảng bộ tỉnh (Tầng 2)",
+      "host": "Bí thư Tỉnh ủy"
+    }
+  ],
+  "schedule_participants": [
+    {
+      "schedule_id": 2,
+      "leader_id": 1
+    },
+    {
+      "schedule_id": 2,
+      "leader_id": 2
+    },
+    {
+      "schedule_id": 2,
+      "leader_id": 3
+    },
+    {
+      "schedule_id": 2,
+      "leader_id": 4
+    }
+  ],
+  "profiles": [
+    {
+      "id": "e399a687-8565-4db5-adde-8d25f268d576",
+      "username": "admin",
+      "password": "9122f6eda0962737cbfef7d573e9da04:193a7ea8180c6948ea4f573b06ba8671901742721370f724db659580c0cb731c6a3a997d1342bab24f44099cb650e28d2d31ff56f8234599ba3deb2b2b9b10b4",
+      "role": "admin"
+    }
+  ]
+}

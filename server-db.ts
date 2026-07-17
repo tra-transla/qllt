@@ -159,12 +159,12 @@ class DatabaseEngine {
       const [rows]: any = await this.pool.query('SELECT * FROM profiles WHERE username = "admin"');
       if (rows.length === 0) {
         const adminId = crypto.randomUUID();
-        const hashedPassword = hashPassword('admin123');
+        const hashedPassword = hashPassword('Sonla@2026##');
         await this.pool.query(
           'INSERT INTO profiles (id, username, password, role) VALUES (?, ?, ?, "admin")',
           [adminId, 'admin', hashedPassword]
         );
-        console.log('Created default admin user for MySQL: admin / admin123');
+        console.log('Created default admin user for MySQL: admin / Sonla@2026##');
       }
 
       console.log('MySQL database schema verified successfully.');
@@ -186,7 +186,7 @@ class DatabaseEngine {
       } else {
         // Pre-seed mock data for an immediate elegant preview!
         const adminId = crypto.randomUUID();
-        const hashedPassword = hashPassword('admin123');
+        const hashedPassword = hashPassword('Sonla@2026##');
         
         this.fallbackData = {
           leaders: [

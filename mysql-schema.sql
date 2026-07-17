@@ -62,7 +62,7 @@ INSERT INTO `leaders` (`id`, `name`, `position`, `department`, `phone`) VALUES
 (3, 'Đ/c Nguyễn Thái Hưng', 'Chủ tịch HĐND Tỉnh', 'HĐND Tỉnh', '0945.123.456'),
 (4, 'Đ/c Hoàng Quốc Khánh', 'Chủ tịch UBND Tỉnh', 'UBND Tỉnh', '0903.987.654');
 
--- Chèn tài khoản quản trị mặc định (Tên đăng nhập: admin / Mật khẩu mặc định: admin123)
+-- Chèn tài khoản quản trị mặc định (Tên đăng nhập: admin / Mật khẩu mặc định: Sonla@2026##)
 -- Chuỗi mật khẩu dưới đây đã được mã hóa bằng thuật toán PBKDF2 tương thích với hệ thống backend Node.js
 INSERT INTO `profiles` (`id`, `username`, `password`, `role`) VALUES
-('default-admin-uuid-0000-1111-2222', 'admin', '8dfa96a1e944747c3fb3ee989e27c1f8:e90fc3ca7cb3eef6317b9b56f9e9da2882a934fe3bc9099839ae6bdf87f5411fb318991fe42721f422e17ceb6d859a117075727ea8db7077a0604b39ca826622', 'admin');
+('default-admin-uuid-0000-1111-2222', 'admin', '9122f6eda0962737cbfef7d573e9da04:193a7ea8180c6948ea4f573b06ba8671901742721370f724db659580c0cb731c6a3a997d1342bab24f44099cb650e28d2d31ff56f8234599ba3deb2b2b9b10b4', 'admin');
