@@ -4,22 +4,23 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { db, hashPassword, verifyPassword, createSessionToken, verifySessionToken } from './server-db';
 
+const appRoot = (() => {
+  if (typeof __dirname !== 'undefined') {
+    if (path.basename(__dirname) === 'dist') {
+      return path.resolve(__dirname, '..');
+    }
+    return __dirname;
+  }
+  return process.cwd();
+})();
+
 async function startServer() {
   const app = express();
   
-  // Detect if we are running in AI Studio sandbox.
-  // AI Studio sandboxes use container environments where the external proxy expects port 3000.
-  const isAIStudio = process.env.APP_URL && (
-    process.env.APP_URL.includes('asia-southeast1.run.app') || 
-    process.env.APP_URL.includes('aistudio') ||
-    process.env.APP_URL.includes('ais-dev') ||
-    process.env.APP_URL.includes('ais-pre')
-  );
-
   // On standard production hosting like Hostinger (using Phusion Passenger or similar),
   // the server MUST listen on process.env.PORT (which can be a port number or a named pipe path).
-  // In AI Studio, we force port 3000 to satisfy the container port forwarder.
-  const PORT = isAIStudio ? 3000 : (process.env.PORT || 3000);
+  // In AI Studio development, we force port 3000 to satisfy the container port forwarder.
+  const PORT = (process.env.NODE_ENV !== 'production') ? 3000 : (process.env.PORT || 3000);
 
   // Initialize Database (MySQL or fallback JSON)
   await db.init();
@@ -351,10 +352,20 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static('dist'));
+    const distPath = path.resolve(appRoot, 'dist');
+    app.use(express.static(distPath));
+
+    // API 404 handler to prevent unmatched API requests from returning index.html
+    app.all('/api/*', (req, res) => {
+      res.status(404).json({ error: `API endpoint ${req.method} ${req.originalUrl} not found` });
+    });
+
     // Handle SPA routing fallback in production
-    app.get('*', (req, res) => {
-      res.sendFile(path.resolve(process.cwd(), 'dist', 'index.html'));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) {
+        return next();
+      }
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 

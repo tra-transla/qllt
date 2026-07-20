@@ -55,11 +55,21 @@ export function verifySessionToken(token: string): any | null {
   }
 }
 
+const appRoot = (() => {
+  if (typeof __dirname !== 'undefined') {
+    if (path.basename(__dirname) === 'dist') {
+      return path.resolve(__dirname, '..');
+    }
+    return __dirname;
+  }
+  return process.cwd();
+})();
+
 // Database Engine
 class DatabaseEngine {
   private pool: mysql.Pool | null = null;
   private isFallback = true;
-  private fallbackFilePath = path.join(process.cwd(), 'db.json');
+  private fallbackFilePath = path.join(appRoot, 'db.json');
   private fallbackData: any = {
     leaders: [],
     schedules: [],
