@@ -408,6 +408,20 @@ async function startServer() {
     });
   }
 
+  // Global error handler for API routes to guarantee they always return JSON instead of HTML pages
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const errorMsg = err?.stack || err || 'Internal Server Error';
+    console.error('API Error caught by global handler:', errorMsg);
+    log(`API Error caught by global handler: ${errorMsg}`);
+    
+    if (req.path.startsWith('/api/')) {
+      return res.status(err.status || 500).json({
+        error: err.message || 'Đã xảy ra lỗi máy chủ nội bộ. Vui lòng thử lại sau.'
+      });
+    }
+    next(err);
+  });
+
   // Start listening
   const isNumeric = (val: any) => !isNaN(Number(val)) && val !== '';
   if (isNumeric(PORT)) {

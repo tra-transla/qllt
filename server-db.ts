@@ -1,8 +1,21 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+
+const appRoot = (() => {
+  if (typeof __dirname !== 'undefined') {
+    if (path.basename(__dirname) === 'dist') {
+      return path.resolve(__dirname, '..');
+    }
+    return __dirname;
+  }
+  return process.cwd();
+})();
+
+// Force load .env from the absolute appRoot path so Phusion Passenger/Hostinger always finds it
+dotenv.config({ path: path.resolve(appRoot, '.env') });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
@@ -21,6 +34,14 @@ export function verifyPassword(password: string, stored: string): boolean {
   } catch (err) {
     return false;
   }
+}
+
+// Safe UUID helper for older Node versions on Hostinger
+export function getUUID(): string {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return crypto.randomBytes(16).toString('hex');
 }
 
 // Session Token helper
@@ -55,16 +76,6 @@ export function verifySessionToken(token: string): any | null {
   }
 }
 
-const appRoot = (() => {
-  if (typeof __dirname !== 'undefined') {
-    if (path.basename(__dirname) === 'dist') {
-      return path.resolve(__dirname, '..');
-    }
-    return __dirname;
-  }
-  return process.cwd();
-})();
-
 // Database Engine
 class DatabaseEngine {
   private pool: mysql.Pool | null = null;
@@ -77,12 +88,31 @@ class DatabaseEngine {
     profiles: []
   };
 
+  private get dbPool(): mysql.Pool {
+    if (this.isFallback) {
+      throw new Error('Database is in local fallback JSON mode.');
+    }
+    if (!this.pool) {
+      throw new Error('Cơ sở dữ liệu MySQL của Hostinger chưa được kết nối hoặc cấu hình sai. Vui lòng kiểm tra lại cấu hình trong file .env hoặc server-debug.log.');
+    }
+    return this.pool;
+  }
+
   async init() {
     const host = process.env.MYSQL_HOST || process.env.VITE_MYSQL_HOST;
     const user = process.env.MYSQL_USER || process.env.VITE_MYSQL_USER;
     const password = process.env.MYSQL_PASSWORD || process.env.VITE_MYSQL_PASSWORD;
     const database = process.env.MYSQL_DATABASE || process.env.VITE_MYSQL_DATABASE;
     const port = parseInt(process.env.MYSQL_PORT || process.env.VITE_MYSQL_PORT || '3306', 10);
+
+    // Detect if we are running in AI Studio sandbox
+    const isAIStudio = process.env.APP_URL && (
+      process.env.APP_URL.includes('asia-southeast1.run.app') || 
+      process.env.APP_URL.includes('aistudio') ||
+      process.env.APP_URL.includes('ais-dev') ||
+      process.env.APP_URL.includes('ais-pre')
+    );
+    const isProduction = process.env.NODE_ENV === 'production' || !isAIStudio;
 
     if (host && user && database) {
       try {
@@ -106,10 +136,18 @@ class DatabaseEngine {
         await this.setupMySQLSchema();
         return;
       } catch (err: any) {
-        console.log(`Note: MySQL connection failed (${err.message || err}).`);
+        console.error(`MySQL connection failed (${err.message || err}).`);
+        if (isProduction) {
+          this.isFallback = false;
+          throw new Error(`Không thể kết nối đến cơ sở dữ liệu MySQL của Hostinger tại ${host}:${port}. Chi tiết lỗi: ${err.message}`);
+        }
         console.log('Falling back to high-performance local JSON database (db.json)...');
       }
     } else {
+      if (isProduction) {
+        this.isFallback = false;
+        throw new Error('Thông tin kết nối cơ sở dữ liệu MySQL của Hostinger (MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE) chưa được cấu hình trong .env!');
+      }
       console.log('MySQL credentials not fully provided. Using file-based JSON storage...');
     }
 
@@ -169,7 +207,7 @@ class DatabaseEngine {
       // Check if an admin user exists, if not, create one
       const [rows]: any = await this.pool.query('SELECT * FROM profiles WHERE username = "admin"');
       if (rows.length === 0) {
-        const adminId = crypto.randomUUID();
+        const adminId = getUUID();
         const hashedPassword = hashPassword('Sonla@2026##');
         await this.pool.query(
           'INSERT INTO profiles (id, username, password, role) VALUES (?, ?, ?, "admin")',
@@ -196,7 +234,7 @@ class DatabaseEngine {
         if (!this.fallbackData.profiles) this.fallbackData.profiles = [];
       } else {
         // Pre-seed mock data for an immediate elegant preview!
-        const adminId = crypto.randomUUID();
+        const adminId = getUUID();
         const hashedPassword = hashPassword('Sonla@2026##');
         
         this.fallbackData = {
@@ -593,7 +631,7 @@ class DatabaseEngine {
   }
 
   async createProfile(data: { username: string; passwordHash: string; role: 'admin' | 'editor' }) {
-    const id = crypto.randomUUID();
+    const id = getUUID();
     if (!this.isFallback && this.pool) {
       await this.pool.query(
         'INSERT INTO profiles (id, username, password, role) VALUES (?, ?, ?, ?)',
