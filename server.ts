@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import { db, hashPassword, verifyPassword, createSessionToken, verifySessionToken } from './server-db';
 
 const appRoot = (() => {
@@ -14,16 +15,54 @@ const appRoot = (() => {
   return process.cwd();
 })();
 
+// Create a robust logger for debugging Hostinger startup/runtime issues
+const logFile = path.resolve(appRoot, 'server-debug.log');
+const log = (msg: string) => {
+  const timestamp = new Date().toISOString();
+  const formattedMsg = `[${timestamp}] ${msg}\n`;
+  try {
+    fs.appendFileSync(logFile, formattedMsg);
+  } catch (e) {
+    console.error(formattedMsg);
+  }
+};
+
+// Listen for uncaught issues to prevent silent crashes
+process.on('uncaughtException', (err) => {
+  log(`CRITICAL UNCAUGHT EXCEPTION: ${err?.stack || err}`);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  log(`CRITICAL UNHANDLED REJECTION: ${reason?.stack || reason}`);
+});
+
 async function startServer() {
+  log('Starting server initialization...');
   const app = express();
   
-  // On standard production hosting like Hostinger (using Phusion Passenger or similar),
-  // the server MUST listen on process.env.PORT (which can be a port number or a named pipe path).
+  // Detect if we are running in AI Studio sandbox.
+  // AI Studio sandboxes use container environments where the external proxy expects port 3000.
+  const isAIStudio = process.env.APP_URL && (
+    process.env.APP_URL.includes('asia-southeast1.run.app') || 
+    process.env.APP_URL.includes('aistudio') ||
+    process.env.APP_URL.includes('ais-dev') ||
+    process.env.APP_URL.includes('ais-pre')
+  );
+
   // In AI Studio development, we force port 3000 to satisfy the container port forwarder.
-  const PORT = (process.env.NODE_ENV !== 'production') ? 3000 : (process.env.PORT || 3000);
+  // On Hostinger, Phusion Passenger uses process.env.PORT.
+  const PORT = isAIStudio ? 3000 : (process.env.PORT || 3000);
+  log(`Configured PORT: ${PORT} (isAIStudio: ${!!isAIStudio})`);
 
   // Initialize Database (MySQL or fallback JSON)
-  await db.init();
+  try {
+    log('Initializing database connection...');
+    await db.init();
+    log('Database initialization completed.');
+  } catch (dbErr: any) {
+    log(`Database initialization failed with error: ${dbErr?.stack || dbErr}`);
+  }
 
   app.use(express.json());
 
@@ -370,15 +409,23 @@ async function startServer() {
   }
 
   // Start listening
-  if (typeof PORT === 'string') {
-    app.listen(PORT, () => {
-      console.log(`Server running on Passenger pipe/socket: ${PORT}`);
+  const isNumeric = (val: any) => !isNaN(Number(val)) && val !== '';
+  if (isNumeric(PORT)) {
+    const numericPort = Number(PORT);
+    app.listen(numericPort, '0.0.0.0', () => {
+      const msg = `Server is listening on port ${numericPort} (0.0.0.0)`;
+      console.log(msg);
+      log(msg);
     });
   } else {
-    app.listen(Number(PORT), '0.0.0.0', () => {
-      console.log(`Server running on port ${Number(PORT)}`);
+    app.listen(PORT, () => {
+      const msg = `Server is listening on Passenger pipe/socket: ${PORT}`;
+      console.log(msg);
+      log(msg);
     });
   }
 }
 
-startServer();
+startServer().catch((err) => {
+  log(`CRITICAL ERROR during startServer: ${err?.stack || err}`);
+});
